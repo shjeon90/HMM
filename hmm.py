@@ -23,20 +23,28 @@ class BaseHmm:
 
     def forward_pass(self, data, emiss_prob_log):
         alpha_log = np.log(self.startprob)[np.newaxis, ...] + self.compute_log_likelihood(data)
+        scale = np.log(np.sum(np.exp(alpha_log[0])))
+        alpha_log[0] -= scale
 
         for t in range(1, len(data)):
             for j in range(self.n_state):
                 ep_log = emiss_prob_log[t, j]
-                alpha_log[t, j] = np.log(np.sum(np.exp(alpha_log[t-1] + np.log(self.transmat[:, j]) + ep_log)))
+                alpha_log[t, j] = np.log(np.sum(np.exp(alpha_log[t - 1] + np.log(self.transmat[:, j]) + ep_log)))
+
+            scale = np.log(np.sum(np.exp(alpha_log[t])))
+            alpha_log[t] -= scale
+
         return alpha_log
 
     def backward_pass(self, data, emiss_prob_log):
         beta_log = np.zeros((len(data), self.n_state))  # log space
 
-        for t in range(len(data)-2, -1, -1):
+        for t in range(len(data) - 2, -1, -1):
             for i in range(self.n_state):
-                ep_log = emiss_prob_log[t+1]    # (n_state, )
-                beta_log[t, i] = np.log(np.sum(np.exp(np.log(self.transmat[i]) + ep_log + beta_log[t+1])))
+                ep_log = emiss_prob_log[t + 1]  # (n_state, )
+                beta_log[t, i] = np.log(np.sum(np.exp(np.log(self.transmat[i]) + ep_log + beta_log[t + 1])))
+            scale = np.log(np.sum(np.exp(beta_log[t])))
+            beta_log[t] -= scale
 
         return beta_log
 
