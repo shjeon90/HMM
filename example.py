@@ -1,4 +1,6 @@
-from hmm import PoissonHmm
+import matplotlib.pyplot as plt
+import numpy as np
+from hmm import PoissonHmm, GaussianHmm
 
 def main():
     data = np.array([
@@ -10,26 +12,41 @@ def main():
         18, 14, 10, 15, 8, 15, 6, 11, 8, 7, 18, 16, 13, 12, 13, 20,
         15, 16, 12, 18, 15, 16, 13, 15, 16, 11, 11])
 
-    hmm = PoissonHmm(n_state=3)
-    hmm.fit(data[..., np.newaxis])
-    # print(hmm.lambdas)
-    # print(hmm.transmat)
-    # print(hmm.startprob)
-    state_seq = hmm.decode(data[..., np.newaxis])
+    models = [
+        PoissonHmm(n_state=5),
+        GaussianHmm(n_state=5)
+    ]
 
-    fig = plt.figure()
-    plt.plot(np.arange(len(data)), data, label='original')
-    plt.plot(np.arange(len(data)), state_seq[:, 0], label='states')
-    plt.legend()
-    fig.show()
+    for model in models:
 
-    samples, state_seq = hmm.sample(100)
+        model.fit(data[..., np.newaxis])
 
-    fig = plt.figure()
-    plt.plot(np.arange(len(state_seq)), hmm.lambdas[state_seq], label='states')
-    plt.plot(np.arange(len(samples)), samples, label='samples')
-    plt.legend()
-    fig.show()
+        state_seq = model.decode(data[..., np.newaxis])
+
+        fig = plt.figure()
+        plt.plot(np.arange(len(data)), data, label='original')
+        plt.plot(np.arange(len(data)), state_seq[:, 0], label='states')
+        plt.legend()
+        if isinstance(model, PoissonHmm):
+            plt.title('Poisson (decode)')
+        elif isinstance(model, GaussianHmm):
+            plt.title('Gaussian (decode)')
+        fig.show()
+
+        samples, state_seq = model.sample(100)
+
+        fig = plt.figure()
+        if isinstance(model, PoissonHmm):
+            plt.plot(np.arange(len(state_seq)), model.lambdas[state_seq], label='states')
+        elif isinstance(model, GaussianHmm):
+            plt.plot(np.arange(len(state_seq)), model.mean[state_seq], label='states')
+        plt.plot(np.arange(len(samples)), samples, label='samples')
+        plt.legend()
+        if isinstance(model, PoissonHmm):
+            plt.title('Poisson (sample)')
+        elif isinstance(model, GaussianHmm):
+            plt.title('Gaussian (sample)')
+        fig.show()
     plt.show()
 
 if __name__ == '__main__':
