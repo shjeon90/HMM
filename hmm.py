@@ -175,8 +175,14 @@ class GaussianHmm(BaseHmm):
         kmeans = cluster.KMeans(n_clusters=self.n_state)
         kmeans.fit(data)
         self.mean = np.squeeze(kmeans.cluster_centers_)
-        cv = np.cov(data.T) + np.eye(data.shape[1])
-        self.cov = np.sqrt(np.squeeze(np.tile(np.diag(cv), (self.n_state, 1))))
+
+        labels = kmeans.labels_
+        self.cov = []
+        for i in range(self.n_state):
+            cluster_data = data[labels == i]
+            self.cov.append(np.std(cluster_data))
+
+        self.cov = np.array(self.cov)
 
     def compute_log_likelihood(self, data):
         return np.array([np.sum(norm.logpdf(data, loc=m, scale=v), axis=1) for m, v in zip(self.mean, self.cov)]).T
